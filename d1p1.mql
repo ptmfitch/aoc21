@@ -3,45 +3,46 @@
  depths: {
   $push: '$$ROOT'
  }
-}}, {$set: {
+}}, {$project: {
+ _id: 0,
  depths: {
   $map: {
    input: '$depths',
-   as: 'o',
+   as: 'this',
    'in': {
     i: {
      $indexOfArray: [
       '$depths',
-      '$$o'
+      '$$this'
      ]
     },
-    o: '$$o'
+    o: '$$this'
    }
   }
  }
-}}, {$set: {
- comparison: {
-  $map: {
+}}, {$project: {
+ depths: {
+  $filter: {
    input: '$depths',
-   as: 'o',
-   'in': {
+   as: 'this',
+   cond: {
     $cond: {
      'if': {
       $eq: [
-       '$$o.i',
+       '$$this.i',
        0
       ]
      },
      then: false,
      'else': {
       $gt: [
-       '$$o.o.depth',
+       '$$this.o.depth',
        {
         $arrayElemAt: [
          '$depths.o.depth',
          {
           $subtract: [
-           '$$o.i',
+           '$$this.i',
            1
           ]
          }
@@ -55,17 +56,6 @@
  }
 }}, {$project: {
  result: {
-  $size: {
-   $filter: {
-    input: '$comparison',
-    as: 'b',
-    cond: {
-     $eq: [
-      '$$b',
-      true
-     ]
-    }
-   }
-  }
+  $size: '$depths'
  }
 }}]
