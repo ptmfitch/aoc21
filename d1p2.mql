@@ -3,50 +3,51 @@
  depths: {
   $push: '$$ROOT'
  }
-}}, {$set: {
+}}, {$project: {
+ _id: 0,
  depths: {
   $map: {
    input: '$depths',
-   as: 'o',
+   as: 'this',
    'in': {
     i: {
      $indexOfArray: [
       '$depths',
-      '$$o'
+      '$$this'
      ]
     },
-    o: '$$o'
+    o: '$$this'
    }
   }
  }
 }}, {$set: {
- sliding_windows: {
+ depths: {
   $map: {
    input: '$depths',
-   as: 'o',
+   as: 'this',
    'in': {
     $cond: {
      'if': {
       $lt: [
-       '$$o.i',
+       '$$this.i',
        2
       ]
      },
      then: {
-      i: '$$o.i',
+      i: '$$this.i',
       sum: 0
      },
      'else': {
-      i: '$$o.i',
+      i: '$$this.i',
       sum: {
        $add: [
-        '$$o.o.depth',
+        '$$this.o.depth',
         {
          $arrayElemAt: [
           '$depths.o.depth',
           {
            $subtract: [
-            '$$o.i',
+            '$$this.i',
             1
            ]
           }
@@ -57,7 +58,7 @@
           '$depths.o.depth',
           {
            $subtract: [
-            '$$o.i',
+            '$$this.i',
             2
            ]
           }
@@ -71,28 +72,27 @@
   }
  }
 }}, {$set: {
- comparison: {
-  $map: {
-   input: '$sliding_windows',
-   as: 'o',
-   'in': {
-    $cond: {
-     'if': {
-      $lt: [
-       '$$o.i',
+ depths: {
+  $filter: {
+   input: '$depths',
+   as: 'this',
+   cond: {
+    $and: [
+     {
+      $gte: [
+       '$$this.i',
        3
       ]
      },
-     then: false,
-     'else': {
+     {
       $gt: [
-       '$$o.sum',
+       '$$this.sum',
        {
         $arrayElemAt: [
-         '$sliding_windows.sum',
+         '$depths.sum',
          {
           $subtract: [
-           '$$o.i',
+           '$$this.i',
            1
           ]
          }
@@ -100,23 +100,12 @@
        }
       ]
      }
-    }
+    ]
    }
   }
  }
 }}, {$project: {
  result: {
-  $size: {
-   $filter: {
-    input: '$comparison',
-    as: 'b',
-    cond: {
-     $eq: [
-      '$$b',
-      true
-     ]
-    }
-   }
-  }
+  $size: '$depths'
  }
 }}]
