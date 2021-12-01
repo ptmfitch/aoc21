@@ -1,0 +1,122 @@
+[{$group: {
+ _id: null,
+ depths: {
+  $push: '$$ROOT'
+ }
+}}, {$set: {
+ depths: {
+  $map: {
+   input: '$depths',
+   as: 'o',
+   'in': {
+    i: {
+     $indexOfArray: [
+      '$depths',
+      '$$o'
+     ]
+    },
+    o: '$$o'
+   }
+  }
+ }
+}}, {$set: {
+ sliding_windows: {
+  $map: {
+   input: '$depths',
+   as: 'o',
+   'in': {
+    $cond: {
+     'if': {
+      $lt: [
+       '$$o.i',
+       2
+      ]
+     },
+     then: {
+      i: '$$o.i',
+      sum: 0
+     },
+     'else': {
+      i: '$$o.i',
+      sum: {
+       $add: [
+        '$$o.o.depth',
+        {
+         $arrayElemAt: [
+          '$depths.o.depth',
+          {
+           $subtract: [
+            '$$o.i',
+            1
+           ]
+          }
+         ]
+        },
+        {
+         $arrayElemAt: [
+          '$depths.o.depth',
+          {
+           $subtract: [
+            '$$o.i',
+            2
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ }
+}}, {$set: {
+ comparison: {
+  $map: {
+   input: '$sliding_windows',
+   as: 'o',
+   'in': {
+    $cond: {
+     'if': {
+      $lt: [
+       '$$o.i',
+       3
+      ]
+     },
+     then: false,
+     'else': {
+      $gt: [
+       '$$o.sum',
+       {
+        $arrayElemAt: [
+         '$sliding_windows.sum',
+         {
+          $subtract: [
+           '$$o.i',
+           1
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   }
+  }
+ }
+}}, {$project: {
+ result: {
+  $size: {
+   $filter: {
+    input: '$comparison',
+    as: 'b',
+    cond: {
+     $eq: [
+      '$$b',
+      true
+     ]
+    }
+   }
+  }
+ }
+}}]

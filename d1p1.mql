@@ -1,0 +1,71 @@
+[{$group: {
+ _id: null,
+ depths: {
+  $push: '$$ROOT'
+ }
+}}, {$set: {
+ depths: {
+  $map: {
+   input: '$depths',
+   as: 'o',
+   'in': {
+    i: {
+     $indexOfArray: [
+      '$depths',
+      '$$o'
+     ]
+    },
+    o: '$$o'
+   }
+  }
+ }
+}}, {$set: {
+ comparison: {
+  $map: {
+   input: '$depths',
+   as: 'o',
+   'in': {
+    $cond: {
+     'if': {
+      $eq: [
+       '$$o.i',
+       0
+      ]
+     },
+     then: false,
+     'else': {
+      $gt: [
+       '$$o.o.depth',
+       {
+        $arrayElemAt: [
+         '$depths.o.depth',
+         {
+          $subtract: [
+           '$$o.i',
+           1
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   }
+  }
+ }
+}}, {$project: {
+ result: {
+  $size: {
+   $filter: {
+    input: '$comparison',
+    as: 'b',
+    cond: {
+     $eq: [
+      '$$b',
+      true
+     ]
+    }
+   }
+  }
+ }
+}}]
