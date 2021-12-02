@@ -1,10 +1,10 @@
 # Advent of Code 2021
 ## About
 This year I'm challenging myself to complete at least half of the Advent of Code challenges using MongoDB's aggregation framework.
-I will be using a free M0 MongoDB Atlas cluster to host the data and MongoDB Compass as an IDE to build my pipelines.
+I will be using an M10 MongoDB Atlas cluster to host the data and MongoDB Compass as an IDE to build my pipelines.
 ## Setup
 1. Go to MongoDB Atlas at https://cloud.mongodb.com/
-2. Create an account and provision a free M0 cluster
+2. Create an account and provision an M10 cluster (minimum tier required for running server side javascript)
 3. Ensure you can access your cluster from your local IP address
 4. Create an username/password pair with rights to access data on your cluster
 5. Note down the connection string for your cluster
@@ -25,3 +25,4 @@ I will be using a free M0 MongoDB Atlas cluster to host the data and MongoDB Com
 1. Use more stages than you need, breaking each stage of the problem into chunks will make debugging and refactoring easier
 2. Add debug fields, keep temporary fields as part of the output for each stage to give you more visibility into what's going on
 3. Someone's probably run into the same problem before, lots of questions and answers about the aggregation framework are available on sites like stackoverflow
+4. If you're getting the "properly formatted document" error, remove and replace individual parts of the stage until the error disappears, better yet, see tip 1
