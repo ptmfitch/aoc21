@@ -6,7 +6,7 @@ I will be using an M10 MongoDB Atlas cluster to host the data and MongoDB Compas
 1. Go to MongoDB Atlas at https://cloud.mongodb.com/
 2. Create an account and provision an M10 cluster (minimum tier required for running server side javascript)
 3. Ensure you can access your cluster from your local IP address
-4. Create an username/password pair with rights to access data on your cluster
+4. Create a username/password pair with rights to access data on your cluster
 5. Note down the connection string for your cluster
 6. Download MongoDB Compass https://www.mongodb.com/products/compass
 7. Open Compass and connect to your cluster, using the connection string you noted down earlier
@@ -26,3 +26,4 @@ I will be using an M10 MongoDB Atlas cluster to host the data and MongoDB Compas
 2. Add debug fields, keep temporary fields as part of the output for each stage to give you more visibility into what's going on
 3. Someone's probably run into the same problem before, lots of questions and answers about the aggregation framework are available on sites like stackoverflow
 4. If you're getting the "properly formatted document" error, remove and replace individual parts of the stage until the error disappears, better yet, see tip 1
+5. Sometimes things break between sample and real inputs, this is usually due to memory contraints or hitting document size limits, for the former, a different approach may be required, for the latter, try combining operations to reduce the number of fields, especially arrays
