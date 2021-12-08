@@ -356,108 +356,42 @@
      }
     }
    }}, {$project: {
+    display: '$display',
+    numbers: [
+     '$zero',
+     '$one',
+     '$two',
+     '$three',
+     '$four',
+     '$five',
+     '$six',
+     '$seven',
+     '$eight',
+     '$nine'
+    ]
+   }}, {$project: {
     output: {
      $map: {
       input: '$display.output',
+      as: 'output',
       'in': {
-       $cond: {
-        'if': {
-         $setEquals: [
-          '$$this',
-          '$zero'
-         ]
-        },
-        then: 0,
-        'else': {
-         $cond: {
-          'if': {
-           $setEquals: [
-            '$$this',
-            '$one'
-           ]
-          },
-          then: 1,
-          'else': {
-           $cond: {
-            'if': {
-             $setEquals: [
-              '$$this',
-              '$two'
-             ]
-            },
-            then: 2,
-            'else': {
-             $cond: {
-              'if': {
-               $setEquals: [
-                '$$this',
-                '$three'
-               ]
-              },
-              then: 3,
-              'else': {
-               $cond: {
-                'if': {
-                 $setEquals: [
-                  '$$this',
-                  '$four'
-                 ]
-                },
-                then: 4,
-                'else': {
-                 $cond: {
-                  'if': {
-                   $setEquals: [
-                    '$$this',
-                    '$five'
-                   ]
-                  },
-                  then: 5,
-                  'else': {
-                   $cond: {
-                    'if': {
-                     $setEquals: [
-                      '$$this',
-                      '$six'
-                     ]
-                    },
-                    then: 6,
-                    'else': {
-                     $cond: {
-                      'if': {
-                       $setEquals: [
-                        '$$this',
-                        '$seven'
-                       ]
-                      },
-                      then: 7,
-                      'else': {
-                       $cond: {
-                        'if': {
-                         $setEquals: [
-                          '$$this',
-                          '$eight'
-                         ]
-                        },
-                        then: 8,
-                        'else': 9
-                       }
-                      }
-                     }
-                    }
-                   }
-                  }
-                 }
-                }
-               }
-              }
-             }
-            }
+       $indexOfArray: [
+        '$numbers',
+        {
+         $first: {
+          $filter: {
+           input: '$numbers',
+           as: 'n',
+           cond: {
+            $setEquals: [
+             '$$output',
+             '$$n'
+            ]
            }
           }
          }
         }
-       }
+       ]
       }
      }
     }
