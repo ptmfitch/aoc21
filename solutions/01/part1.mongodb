@@ -1,0 +1,62 @@
+// cd solutions/01
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day1 --type csv --fields depth --file sample.csv
+
+use('aoc');
+
+const part1 = [
+  {
+    // Create depths array
+    $group: { 
+      // Group on null to group all documents into a single document
+      _id: null, 
+      // Create an array of all the depths
+      // Each element is the full document ($$ROOT),
+      // including unique _id field
+      depths: { $push: '$$ROOT' }  
+    }
+  }, {
+    $project: { // Add index to depths array
+      // Remove the _id field from the grouped document
+      _id: 0,
+      // Iterate through the depths array
+      depths: { $map: {
+        input: '$depths',
+        'in': {
+          // Add an explicit index field (i) to each element
+          i: { $indexOfArray: [ '$depths', '$$this' ] },
+          // Move the existing fields into a new object (o)
+          o: '$$this'
+        }
+      } } 
+    }
+  }, {
+    $project: { // Filter the depths array
+      depths: { $filter: {
+        input: '$depths',
+        cond: { $cond: {
+          // Skip the 0th element because there
+          // isn't a previous element to compare
+          'if': { $eq: [ '$$this.i', 0 ] },
+          then: false,
+          // Return elements where the depth is greater
+          // than the previous element's depth
+          'else': { $gt: [
+            '$$this.o.depth',
+            { $arrayElemAt: [
+                '$depths.o.depth',
+                { $subtract: [ '$$this.i', 1 ] }
+            ] }
+          ] }
+        } } 
+      } }
+    }
+  }, {
+    $project: { // Calculate the result
+      // Count the number of elements
+      // remaining in the depths array
+      result: { $size: '$depths' }
+    }
+  }
+]
+
+db.day1.aggregate(part1);
