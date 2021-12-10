@@ -3,47 +3,91 @@
 
 use('aoc');
 
-const part1 = [
+const aggregation = [
   {
-    $group: {
-      _id: null,
-      depths: { $push: '$$ROOT' }
+    // Create depths array
+    $group: { 
+      // Group on null to group all documents into a single document
+      _id: null, 
+      // Create an array of all the depths
+      // Each element is the full document ($$ROOT),
+      // including unique _id field
+      depths: { $push: '$$ROOT' }  
     }
   }, {
-    $project: {
+    $project: { // Add index to depths array
+      // Remove the _id field from the grouped document
       _id: 0,
+      // Iterate through the depths array
       depths: { $map: {
         input: '$depths',
-        as: 'this',
         'in': {
+          // Add an explicit index field (i) to each element
           i: { $indexOfArray: [ '$depths', '$$this' ] },
+          // Move the existing fields into a new object (o)
           o: '$$this'
         }
       } } 
     }
   }, {
-    $project: {
-      depths: { $filter: {
+    $set: { // Create the sliding windows
+      // Iterate through the depths array
+      depths: { $map: {
         input: '$depths',
         as: 'this',
-        cond: { $cond: {
-          'if': { $eq: [ '$$this.i', 0 ] },
-          then: false,
-          'else': { $gt: [
-            '$$this.o.depth',
-            { $arrayElemAt: [
+        'in': { $cond: {
+          // Set the first two elements to zero because
+          // they don't have previous elements to sum
+          'if': { $lt: [ '$$this.i', 2 ] },
+          then: { i: '$$this.i', sum: 0 },
+          'else': {
+            i: '$$this.i',
+            // Sum the current depth with the depths
+            // of the previous two elements
+            sum: { $add: [
+              '$$this.o.depth',
+              { $arrayElemAt: [
                 '$depths.o.depth',
                 { $subtract: [ '$$this.i', 1 ] }
+              ] },
+              { $arrayElemAt: [
+                '$depths.o.depth',
+                { $subtract: [ '$$this.i', 2 ] }
+              ] }
             ] }
-          ] }
-        } } 
+          }
+      } }
       } }
     }
   }, {
-    $project: {
+    $set: { // Filter the sliding windows
+      // Filter the depths array
+      depths: { $filter: {
+        input: '$depths',
+        as: 'this',
+        cond: { $and: [
+          // Skip the first three elements because there
+          // aren't any previous elements to compare to
+          { $gte: [ '$$this.i', 3 ] },
+          // Return elements where the sum is greater
+          // than the previous element's sum
+          { $gt: [
+            '$$this.sum',
+            { $arrayElemAt: [
+              '$depths.sum',
+              { $subtract: [ '$$this.i', 1 ] }
+            ] }
+          ] }
+        ] }
+      } }
+    }
+  }, {
+    $project: { // Calculate the output
+      // Count the number of elements
+      // remaining in the depths array
       result: { $size: '$depths' }
     }
-  }
-]
+}]
 
-db.day1.aggregate(part1);
+
+db.day1.aggregate(aggregation);

@@ -3,7 +3,7 @@
 
 use('aoc');
 
-const part1 = [
+const aggregation = [
   {
     // Create depths array
     $group: { 
@@ -59,4 +59,4 @@ const part1 = [
   }
 ]
 
-db.day1.aggregate(part1);
+db.day1.aggregate(aggregation);
