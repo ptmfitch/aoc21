@@ -1,0 +1,57 @@
+// cd solutions/02
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day2 --type csv --fields instruction --file sample.csv
+
+use('aoc');
+
+const aggregation = [
+  // TODO combine $set and $project into a single stage
+  // by using $let to set "split" as a reusable var
+  {
+    $set: { // Split the instruction into direction and disance
+      split: { $split: [ '$instruction', ' ' ] }
+    }
+  }, {
+    $project: { // Parse the split instruction into two fields
+      _id: 0,
+      direction: { $arrayElemAt: [ '$split', 0 ] },
+      distance: { $toInt: { $arrayElemAt: [ '$split', 1 ] } }
+    }
+  }, {
+    $group: { // Sum the horizontal and vertical movements
+      _id: null,
+      // Sum the distance moved forwards
+      forward: { $sum: {
+        $cond: {
+          'if': { $eq: [ '$direction', 'forward' ] },
+          then: '$distance',
+          'else': 0
+        }
+      } },
+      // Sum the distance moved up and down
+      depth: { $sum: {
+        $cond: {
+          // If the direction is down, add distance to the depth
+          'if': { $eq: [ '$direction', 'down' ] },
+          then: '$distance',
+          // Otherwise if the direction is up, subtract from the depth
+          'else': { $cond: {
+            'if': { $eq: [ '$direction', 'up' ] },
+            // Multiply distance by -1 to subtract from the depth
+            then: { $multiply: [ '$distance', -1 ] },
+            'else': 0
+          } }
+        }
+      } }
+    }
+  }, {
+    $project: { // Calculate the result
+      _id: 0,
+      // Multiply the distance moved
+      // forward by the depth
+      result: { $multiply: [ '$forward', '$depth' ] }
+    }
+  }
+]
+
+
+db.day2.aggregate(aggregation);

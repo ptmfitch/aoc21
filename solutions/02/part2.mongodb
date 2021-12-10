@@ -1,0 +1,81 @@
+// cd solutions/02
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day2 --type csv --fields instruction --file sample.csv
+
+use('aoc');
+
+const aggregation = [
+  // TODO combine $set and $project into a single stage
+  // by using $let to set "split" as a reusable var
+  {
+    $set: { // Split the instruction into direction and disance
+      split: { $split: [ '$instruction', ' ' ] }
+    }
+  }, {
+    $project: { // Parse the split instruction into two fields
+      _id: 0,
+      direction: { $arrayElemAt: [ '$split', 0 ] },
+      distance: { $toInt: { $arrayElemAt: [ '$split', 1 ] } }
+    }
+  }, {
+    $group: { // Calculate the depth and distance using an accumulator
+      // Group all documents together
+      // into a single document
+      _id: null,
+      // As documents are grouped, perform the accumulate function
+      // on them to calculate ongoing depth and distance
+      accumulator: { $accumulator: {
+        // Initialise the state
+        init: function() {
+          return {
+            forward: 0,
+            depth: 0,
+            aim: 0
+          }
+        },
+        // Calculate the next state
+        // by adding the next document
+        accumulate: function(state, direction, distance) {
+          let fw = state.forward
+          let dp = state.depth
+          let am = state.aim
+          if (direction == "forward") {
+            fw += distance
+            dp += distance * am // Thank god there's no trig
+          } else {
+            if (direction == "down") {
+              am += distance
+            } else {
+              am -= distance
+            }
+          }
+          return {
+            forward: fw,
+            depth: dp,
+            aim: am
+          }
+        },
+        // Arguments for the accumulate function
+        accumulateArgs: [ '$direction', '$distance' ],
+        // For sharded clusters, merge the state from 2 shards...
+        // ...probably not used on my single replica set M10
+        merge: function(state1, state2) {
+          return {
+            forward: state1.forward + state2.forward,
+            depth: state1.depth + state2.depth,
+            aim: state1.aim + state2.aim
+          }
+        },
+        lang: 'js'
+      } }
+    }
+  }, {
+    $project: { // Calculate the result
+      _id: 0,
+      // Multiply the distance moved
+      // forward by the depth
+      result: { $multiply: [ '$accumulator.forward', '$accumulator.depth' ] }
+    }
+  }
+]
+
+db.day2.aggregate(aggregation);
