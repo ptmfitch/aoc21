@@ -1,0 +1,112 @@
+// cd solutions/13
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day13 --type csv --fields a,b --file sample.csv
+
+use('aoc');
+
+const aggregation = [
+  {
+    $group: { // Separate the dots from the folding instructions
+      // Collect all the documents into a single document
+      _id: null,
+      // Create an array of dots
+      dots: { $push: { $cond: {
+        // Dots are numbers
+        'if': { $isNumber: '$a' },
+        then: { x: '$a', y: '$b' },
+        // We can remove nulls later
+        'else': null
+      } } },
+      // Create a separate arrow of folding instructions
+      folds: { $push: { $cond: {
+        // Instructions are strings
+        'if': { $not: { $isNumber: '$a' } },
+        then: { $let: {
+          vars: {
+            // Split the last word of the instruction on '='
+            split: { $split: [ 
+              { $last: { $split: [ '$a', ' ' ] } },
+                '=' 
+            ] }
+          },
+          'in': {
+            axis: { $arrayElemAt: [ '$$split', 0 ] },
+            n: { $toInt: { $arrayElemAt: [ '$$split', 1 ] } }
+          }
+        } },
+        // We can remove nulls later
+        'else': null
+      } } }
+    }
+  }, {
+    $set: { // Remove null values from both dots and folds
+      dots: { $filter: {
+        input: '$dots',
+        cond: { $not: { $eq: [ '$$this', null ] } }
+      } },
+      folds: { $filter: {
+        input: '$folds',
+        cond: { $not: { $eq: [ '$$this', null ] } }
+      } }
+    }
+  }, {
+    $set: { fold: { $let: { // Apply the first fold
+      vars: {
+        axis: { $arrayElemAt: [ '$folds.axis', 0 ] },
+        n: { $arrayElemAt: [ '$folds.n', 0 ] }
+      },
+      'in': { $map: {
+        // Loop through the dots array
+        // and apply the folding logic
+        input: '$dots',
+        as: 'dot',
+        'in': { $cond: {
+          'if': { $eq: [ '$$axis', 'x' ] },
+          // Fold is on the x-axis
+          then: { $cond: {
+            'if': { $gt: [ '$$dot.x', '$$n' ] },
+            // Dot is on the right side of the line
+            then: {
+              // Subtract the distance between the dot and the line
+              // from the position of the line itself to apply a fold
+              x: { $subtract: [ '$$n', { $subtract: [ '$$dot.x', '$$n' ] } ] },
+              // y doesn't change here
+              y: '$$dot.y'
+            },
+            // Dot is on the left side of the line
+            'else': '$$dot'
+          } },
+          // Fold is on the y-axis
+          'else': { $cond: {
+            'if': { $gt: [ '$$dot.y', '$$n' ] },
+            then: {
+              // x doesn't change here
+              x: '$$dot.x',
+              // Subtract the distance between the dot and the line
+              // from the position of the line itself to apply a fold
+              y: { $subtract: [ '$$n', { $subtract: [ '$$dot.y', '$$n' ] } ] }
+            },
+            // Dot is above the line
+            'else': '$$dot'
+          } }
+        } }
+      } }
+    } } }
+  }, {
+    // Unwind the list of folded dots
+    $unwind: { path: '$fold' }
+  }, {
+    $group: { // Create the new dots array
+      _id: null,
+      // Add new dots to set to consolidate dupes
+      dots: { $addToSet: '$fold' }
+    }
+  }, {
+    $project: { // Calculcate the result
+      _id: 0,
+      // Result is the number of dots after one fold
+      result: { $size: '$dots' }
+    }
+  }
+]
+
+db.day13.aggregate(aggregation);
