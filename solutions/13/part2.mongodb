@@ -1,0 +1,149 @@
+// cd solutions/13
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day13 --type csv --fields a,b --file sample.csv
+
+use('aoc');
+
+// Hold onto your hats
+const aggregation = [
+  {
+    $group: { // Separate the dots from the folding instructions
+      // Collect all the documents into a single document
+      _id: null,
+      // Create an array of dots
+      dots: { $push: { $cond: {
+        // Dots are numbers
+        'if': { $isNumber: '$a' },
+        then: { x: '$a', y: '$b' },
+        // We can remove nulls later
+        'else': null
+      } } },
+      // Create a separate arrow of folding instructions
+      folds: { $push: { $cond: {
+        // Instructions are strings
+        'if': { $not: { $isNumber: '$a' } },
+        then: { $let: {
+          vars: {
+            // Split the last word of the instruction on '='
+            split: { $split: [ 
+              { $last: { $split: [ '$a', ' ' ] } },
+                '=' 
+            ] }
+          },
+          'in': {
+            axis: { $arrayElemAt: [ '$$split', 0 ] },
+            n: { $toInt: { $arrayElemAt: [ '$$split', 1 ] } }
+          }
+        } },
+        // We can remove nulls later
+        'else': null
+      } } }
+    }
+  }, {
+    $set: { // Remove null values from both dots and folds
+      dots: { $filter: {
+        input: '$dots',
+        cond: { $not: { $eq: [ '$$this', null ] } }
+      } },
+      folds: { $filter: {
+        input: '$folds',
+        cond: { $not: { $eq: [ '$$this', null ] } }
+      } }
+    }
+  }, {
+    // Unwind then sort the folds
+    $unwind: { path: '$folds' }
+  }, {
+    // They get out of order on import
+    $sort: { folds: -1 }
+  }, {
+    // Group the document back together
+    $group: {
+      _id: null,
+      dots: { $addToSet: '$dots' },
+      folds: { $push: '$folds' }
+    }
+  }, {
+    // Need to clean up the dots array
+    $set: { dots: { $arrayElemAt: [ '$dots', 0 ] } }
+  }, {
+    // Apply the folds to the dots array
+    $set: { fold: { $function: {
+      body: function(dots, folds) {
+        for (let i = 0; i < folds.length; i++) {
+          let fold = folds[i]
+          for (let j = 0; j < dots.length; j++) {
+            let dot = dots[j]
+            if (fold.axis == "x") {
+              // Fold on the x-axis
+              if (dot.x > fold.n) {
+                dots[j] = {
+                  x: fold.n - (dot.x - fold.n),
+                  y: dot.y
+                }
+              }
+            } else {
+              // Fold on the y-axis
+              if (dot.y > fold.n) {
+                dots[j] = {
+                  x: dot.x,
+                  y: fold.n - (dot.y - fold.n)
+                }
+              }
+            }
+          }
+        }
+        // Need to de-dupe next
+        return dots
+      },
+      args: [ '$dots', '$folds' ],
+      lang: 'js'
+    } } }
+  }, {
+    // Unwind then group to de-dupe
+    $unwind: { path: '$fold' }
+  }, {
+    $group: {
+      // Group on y so we can form each line as a string next
+      _id: '$fold.y',
+      // Add points on x to a set to de-dupe
+      dots: { $addToSet: '$fold.x' }
+    }
+  }, {
+    // Create a char array
+    $project: { s: { $map: {
+      // Make an array length 0 -> max x + 1
+      // which we'll turn into a string later
+      input: { $range: [ 0, { $add: [ { $max: '$dots' }, 1 ] } ] },
+      as: 'i',
+      'in': { $cond: {
+        'if': { $in: [ '$$i', '$dots' ] },
+        // Place a # on each dot
+        then: '#',
+        // Place a . on each space
+        'else': '.'
+      } }
+    } } }
+  }, {
+    // Sort by y ascending
+    $sort: { _id: 1 }
+  }, {
+    // Turn the char array into a string
+    // using $reduce to concat chars
+    $set: { s: { $reduce: {
+      input: '$s',
+      // Start with an empty string
+      initialValue: '',
+      // Add each char to the preceding string
+      'in': { $concat: [ '$$value', '$$this' ] }
+    } } }
+  }, {
+    $group: { // Add the strings to an array to make it legible
+      _id: null,
+      // The result will be capital letters spelled out,
+      // you may need to squint
+      ss: { $push: '$s' }
+    }
+  }
+]
+
+db.day13.aggregate(aggregation);
