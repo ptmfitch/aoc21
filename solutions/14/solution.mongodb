@@ -1,0 +1,172 @@
+// cd solutions/14
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day14 --type csv --fields line --file sample.csv
+
+use('aoc');
+
+// Parts 1 & 2 use the same solution
+// Just change steps from 10 to 40 in the $function
+const aggregation = [
+  {
+    $group: { // Create a single document with the required fields
+      _id: null,
+      // Rules is an array of pairs with corresponding pairs to insert
+      rules: { $push: { $cond: {
+        // Rules have a '->' in them
+        'if': { $regexMatch: { input: '$line', regex: RegExp('.*->.*') } },
+        // A matching pair will result in two new pairs
+        // Parse the rule to make the following
+        // AB -> C => AB -> [AC, CB]
+        then: { $let: {
+          vars: {
+            // Gives us AB and C
+            split: { $split: [ '$line', ' -> ' ] },
+            first: { $substr: [ '$line', 0, 1 ] },
+            second: { $substr: [ '$line', 1, 1 ] }
+          },
+          'in': {
+            // AB
+            pair: { $arrayElemAt: [ '$$split', 0 ] },
+            insert: [
+              // AC
+              { $concat: [ '$$first', { $arrayElemAt: [ '$$split', 1 ] } ] },
+              // CB
+              { $concat: [ { $arrayElemAt: [ '$$split', 1 ] }, '$$second' ] }
+            ]
+          }
+        } },
+        // We'll get rid of the null later
+        'else': null
+      } } },
+      // Template is an array of pairs generated from the initial template
+      // ABCD => [AB, BC, CD]
+      template: { $push: { $cond: {
+        // The initial template doesn't have a '->'
+        'if': { $not: { $regexMatch: { input: '$line', regex: RegExp('.*->.*') } } },
+        then: { $map: {
+          // There will 1 fewer pairs than the length of the template
+          input: { $range: [ 0, { $subtract: [ { $strLenCP: '$line' }, 1 ] } ] },
+          as: 'i',
+          // Essentially a sliding window on the template string
+          'in': { $substr: [ '$line', '$$i', 2 ] }
+        } },
+        // Again, we'll get rid of the nulls later
+        'else': null
+      } } }
+    }
+  }, {
+    $set: { // Remove the null values
+      rules: { $filter: {
+        input: '$rules',
+        cond: { $not: { $eq: [ '$$this', null ] } }
+      } },
+      // Template is the 0th value of the array
+      // once you clear out the nulls
+      template: { $arrayElemAt: [ 
+        { $filter: {
+          input: '$template',
+          cond: { $not: { $eq: [ '$$this', null ] } }
+        } },
+        0
+      ] }
+    }
+  }, {
+    $set: {
+      // We count every character in every pair twice apart
+      // from the first and last characters in the initial
+      // template, so we must take a note of these for later
+      firstAndLast: [
+        // Take the first character from the first pair
+        { $substr: [ { $first: '$template' }, 0, 1 ] },
+        // Take the second character from the last pair
+        { $substr: [ { $last: '$template' }, 1, 1 ] }
+      ]
+    }
+  }, {
+    $set: { // Apply the rules
+      steps: {
+        $function: {
+          body: function(rules, template, firstAndLast) {
+            // Map the rules array into a dictionary for easy reference
+            // AB -> [AC, CB]
+            let ruleDict = Object.assign({}, ...rules.map((x) => ({[x.pair]: x.insert})))
+            // Map the pairs array from the initial template into a dictionary
+            // [AB, BC, CD] -> {AB: 1, BC: 1, CD: 1}
+            let pairDict = {}
+            for (let i = 0; i < template.length; i++) {
+              let pair = template[i]
+              // If the key doesn't exist, set it to 1
+              if (!pairDict[pair]) {
+                pairDict[pair] = 1
+              // If the key does exist add 1, there may be dupes
+              } else {
+                pairDict[pair] += 1
+              }
+            }
+            // *********************************************
+            // *** ONLY DIFFERENCE BETWEEN PARTS 1 AND 2 ***
+            // *********************************************
+            // Set steps < 10 for part 1, steps < 40 for part 2
+            for (let steps = 0; steps < 10; steps++) {
+              // Each step will create a new
+              // version of the pairs dictionary
+              let newDict = {}
+              // Loop through the previous pairs dictionary
+              for (let [pair, n] of Object.entries(pairDict)) {
+                // Add n (the number of occurrences of the pair)
+                // to the corresponding new pairs counts in the
+                // new dictionary
+                for (let newPair of ruleDict[pair]) {
+                  if (!newDict[newPair]) {
+                    newDict[newPair] = n
+                  } else {
+                    newDict[newPair] += n
+                  }
+                }
+              }
+              // Set the pair dictionary
+              // to the new version
+              pairDict = newDict
+            }
+            // Now we need to count the
+            // individual elements
+            let elements = {}
+            for (let [key, value] of Object.entries(pairDict)) {
+              for (let element of key) {
+                // Divide by two because each element
+                // would be counted twice otherwise
+                if (!elements[element]) {
+                  elements[element] = value / 2
+                } else {
+                  elements[element] += value / 2
+                }
+              }
+            }
+            // The first and last elements are
+            // missing 0.5 from their count at
+            // the end, so add that on
+            for (element of firstAndLast) {
+              elements[element] += 0.5
+            }
+            return elements
+          },
+          args: [ '$rules', '$template', '$firstAndLast' ],
+          lang: 'js'
+        }
+      }
+    }
+  }, {
+    $project: { // Turn the character counts object into an array of numbers
+      _id: 0,
+      // We can't get the $max from an object, must be an array of numbers,
+      // so have to convert the output from the previous $function
+      elements: { $map: { input: { $objectToArray: '$steps' }, 'in': '$$this.v' } }
+    }
+  }, {
+    $project: { // Calculate the result
+      // Subtract the min from the max in our elements array 
+      result: { $subtract: [ { $max: '$elements' }, { $min: '$elements' } ] }
+    }
+  }
+]
+
+db.day14.aggregate(aggregation);
