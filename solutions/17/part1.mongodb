@@ -1,0 +1,8 @@
+// cd solutions/17
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day17 --type csv --fields a,b --file sample.csv
+
+use('aoc');
+
+const aggregation = []
+
+db.day11.aggregate(aggregation);
