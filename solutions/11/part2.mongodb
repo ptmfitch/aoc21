@@ -1,0 +1,121 @@
+// cd solutions/11
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day11 --type csv --fields row --maintainInsertionOrder --file sample.csv
+
+use('aoc');
+
+const aggregation = const aggregation = [
+  {
+    $group: { // Create a single document with all rows in an array of strings
+      _id: null,
+      rows: { $push: { $toString: '$row' } }
+    }
+  }, {
+    $project: { // Transform the array of strings into an array of arrays of integers
+      _id: 0,
+      rows: { $map: { // Iterate through each string
+        input: '$rows',
+        as: 'row',
+        'in': { $map: { // Map each string to an array of integers
+          input: { $range: [ 0, { $strLenCP: '$$row' } ] },
+          as: 'i',
+          // Transform the char at substr i -> i+1 into an integer
+          'in': { $toInt: { $substr: [ '$$row', '$$i', 1 ] } }
+        } }
+      } }
+    }
+  }, {
+    $set: { // Count the number of flashes over 100 steps
+      steps: {
+        $function: {
+          body: function(rows) {
+              // Increment energy of all elements
+              function increaseEnergy(_rows) {
+                for (let i=0; i < _rows.length; i++) {
+                  for (let j=0; j < _rows[i].length; j++) {
+                    _rows[i][j]++
+                  }
+                }
+                return _rows
+              }
+              // Does anything need to flash (element exists where energy > 9)
+              function stillToFlash(_rows) {
+                for (let i=0; i < _rows.length; i++) {
+                  for (let j=0; j < _rows[i].length; j++) {
+                    if (_rows[i][j] > 9) {
+                      return true
+                    }
+                  }
+                }
+              }
+              // Flash elements that need to (elements where energy > 9 = 0)
+              // Increment surrounding (elements[i-1 -> i+1][j-1 -> j+1]) non-flashed (energy != 0) elements
+              function flash(_rows) {
+                // Skip out of bounds indices
+                function withinBounds(x, y, mx, my) {
+                  return x >= 0 && x < mx && y >= 0 && y < my
+                }
+                for (let i=0; i < _rows.length; i++) {
+                  for (let j=0; j < _rows[i].length; j++) {
+                    if (_rows[i][j] > 9) {
+                      // Set the flashed element to 0
+                      _rows[i][j] = 0
+                      for (let k=i-1; k<=i+1; k++) {
+                        for (let l=j-1; l<=j+1; l++) {
+                          // Skip out of bounds indices
+                          if (withinBounds(k, l, _rows.length, _rows[i].length)) {
+                            // Skip the element itself (not necessary I know...)
+                            // and elements that have already flashed this step
+                            if (!(k == i && l == j) && _rows[k][l] != 0) {
+                              _rows[k][l]++
+                            } 
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                return _rows
+              }
+              // Count the number of 0s to get the total
+              // flashed elements for this step
+              function countFlashed(_rows) {
+                let _flashed = 0
+                for (let i=0; i < _rows.length; i++) {
+                  for (let j=0; j < rows.length; j++) {
+                    if (rows[i][j] == 0) {
+                      _flashed++
+                    }
+                  }
+                }
+                return _flashed
+              }
+              // Counter for our final result
+              let steps = 0
+              // Loop until all elements flash in a single step
+              while (countFlashed(rows) != rows.length * rows[0].length) {
+                // Increment energy of all elements
+                rows = increaseEnergy(rows)
+                // Does anything need to flash (element exists where energy > 9)
+                while(stillToFlash(rows)) {
+                  // Flash elements that need to (elements where energy > 9 = 0)
+                  // Increment surrounding (elements[i-1 -> i+1][j-1 -> j+1]) non-flashed (energy != 0) elements
+                  rows = flash(rows)
+                }
+                // Increment the counter for our final result
+                steps++
+              }
+              return flashed
+            },
+          args: [ '$rows' ],
+          lang: 'js'
+        }
+      }
+    }
+  }, {
+    $project: { // The result is the number of flashes
+      result: '$steps'
+    }
+  }
+]
+
+db.day11.aggregate(aggregation);
