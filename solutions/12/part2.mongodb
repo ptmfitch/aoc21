@@ -1,0 +1,106 @@
+// cd solutions/12
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day12 --type csv --fields line --maintainInsertionOrder --file sample1.csv
+
+use('aoc');
+
+const aggregation = [
+  {
+    $project: { // Parse the input string
+      _id: 0,
+      connection: [
+        // This looks silly because it is...
+        // ...I could have just used the output of the $split
+        { $arrayElemAt: [ { $split: [ '$lines', '-' ] }, 0 ] },
+        { $arrayElemAt: [ { $split: [ '$lines', '-' ] }, 1 ] }
+      ]
+    }
+  }, {
+    $group: { // Create a single document wit hthe connections array
+      _id: 'null',
+      connections: { $push: '$connection' }
+    }
+  }, {
+    $result: { // Calculate the paths recursively, return length
+      _id: 0,
+      paths: {
+        $function: {
+          body: function(connections) {
+            // Dictionary of connections, e.g. start: [A, b, c]
+            let connectionDict = {}
+            // Array of unique paths through the cave system
+            let paths = []
+            // Initialise the connections dictionary
+            // going both ways, a -> b and b -> a
+            for (let c of connections) {
+              // Add the connection from a to b
+              if (connectionDict[c[0]]) {
+                // Append connection if an entry exists
+                connectionDict[c[0]].push(c[1])
+              } else {
+                // Create a new array if no entry exists
+                connectionDict[c[0]] = [c[1]]
+              }
+              // Repeat for the connection from b to a
+              if (connectionDict[c[1]]) {
+                connectionDict[c[1]].push(c[0])
+              } else {
+                connectionDict[c[1]] = [c[0]]
+              } 
+            }
+            // Recursive function to pathfind
+            // through the cave system
+            function pathfind(cur, acc, doubleVisit) {
+              // Increment the cave if it
+              // hasn't been visited
+              if (acc[cur]) {
+                acc[cur]++
+              // Start counting from 1 if it
+              // hasn't been visited before
+              } else {
+                acc[cur] = 1
+              }
+              // Set doubleVisit to true if lowercase and
+              // you've been to current cave exactly twice
+              if (cur.toLowerCase() == cur && acc[cur] == 2) {
+                doubleVisit = true
+              }
+              // If you reach the end then
+              // add your path to the paths
+              // array (global to $function)
+              if (cur == 'end') {
+                paths.push(acc)
+                return
+              }
+              for (let c of connectionDict[cur]) {
+                // JavaScript apparently doesn't have
+                // a c.isLowerCase(), so this will have
+                // to do - also check if you've been to
+                // that lower case cave before
+                if (c.toLowerCase() == c && c in acc) {
+                  // Don't return to start and don't
+                  // double visit if you already have
+                  if (c == 'start' || doubleVisit) {
+                    continue
+                  }
+                }
+                // Continue recursing, remember objects
+                // are passed by reference so reassign
+                pathfind(c, Object.assign({}, acc), doubleVisit)
+              }
+            }
+            // Start at the 'start'
+            pathfind('start', {})
+            // Return the length directly
+            // because the size of all the
+            // paths is more than 16mb
+            return paths.length
+          },
+          args: [ '$connections' ],
+          lang: 'js'
+        }
+      }
+    }
+  }
+]
+
+db.day12.aggregate(aggregation);
