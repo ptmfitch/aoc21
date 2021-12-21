@@ -1,0 +1,149 @@
+// cd solutions/04
+// mongoimport --uri mongodb+srv://<username>:<password>@<url>/aoc --collection day4 --type csv --fields line --maintainInsertionOrder --file sample.csv
+
+use('aoc');
+
+const aggregation = [
+  {
+    $match: { // Clean up empty documents from import
+      line: { $exists: true }
+    }
+  }, {
+    $group: { // Create a single document with an array of lines
+      _id: null,
+      lines: { $push: '$$ROOT' }
+    }
+  }, {
+    $project: { // Create the array of bingo numbers and horizontal boards
+      _id: 0,
+      // The bingo numbers are the first line, split on ','
+      numbers: { $split: [ { $arrayElemAt: [ '$lines.line', 0 ] }, ',' ] },
+      // The boards are 5 lines long, starting from the second
+      // line and finishing at the end of the lines array
+      boards_h: { $map: {
+        input: { $range: [ 1, { $size: '$lines' }, 5 ] },
+        as: 'i',
+        'in': { $map: {
+          // Create a nested array of every group of 5 lines
+          input: { $range: [ 0, 5 ] },
+          as: 'j',
+          'in': { $filter: {
+            input: { $split: [ { $arrayElemAt: [ '$lines.line', { $add: [ '$$i', '$$j' ] } ] }, ' ' ] },
+            cond: { $gt: [ '$$this', '' ] }
+          } }
+        } }
+      } }
+    }
+  }, {
+    $set: { // Create the vertical boards
+      boards_v: { $map: {
+        input: '$boards_h',
+        as: 'board',
+        'in': { $map: {
+          input: { $range: [ 0, 5 ] },
+          as: 'i',
+          'in': { $map: {
+            input: { $range: [ 0, 5 ] },
+            as: 'j',
+            // Rotate the boards by swapping i and j
+            'in': { $arrayElemAt: [ { $arrayElemAt: [ '$$board', '$$j' ] }, '$$i' ] }
+          } }
+        } }
+      } }
+    }
+  }, {
+    $set: { // Calculate the winning boards
+      // Find the minimum winning index from
+      // the numbers array for horizontal boards
+      min_indices_h: { $map: {
+        input: '$boards_h',
+        as: 'board',
+        // The minimum winning index from the numbers array
+        // for each board, the lowest is the winning board
+        'in': { $min: { $map: {
+          input: '$$board',
+          as: 'line',
+          // The maximum index is the index of the number
+          // from the numbers array that completes that line
+          'in': { $max: { $map: {
+            input: '$$line',
+            as: 'n',
+            'in': { $indexOfArray: [ '$numbers', '$$n' ] }
+          } } }
+        } } }
+      } },
+      // Find the minimum winning index from
+      // the numbers array for vertical boards
+      min_indices_v: { $map: {
+        input: '$boards_v',
+        as: 'board',
+        // Same logic as above
+        'in': { $min: { $map: {
+          input: '$$board',
+          as: 'line',
+          'in': { $max: { $map: {
+            input: '$$line',
+            as: 'n',
+            'in': { $indexOfArray: [ '$numbers', '$$n' ] }
+          } } }
+        } } }
+      } }
+    }
+  }, {
+    $set: { // Calculate the overall loser
+      // The highest winning index from the numbers array
+      // found on either horizontal or vertical boards
+      max_index: { $max: { $map: {
+        input: { $range: [ 0, { $size: '$min_indices_h' } ] },
+        'in': { $min: [ 
+          { $arrayElemAt: [ '$min_indices_h', '$$this' ] },
+          { $arrayElemAt: [ '$min_indices_v', '$$this' ] }
+        ] }
+      } } }
+    }
+  }, {
+    $set: { // Calculate the losing board and final number called
+      // Index of the losing board, reverse engineered from the losing number index
+      winning_board_index: { $indexOfArray: [ { $arrayElemAt: [
+        { $filter: {
+            input: [ '$min_indices_h', '$min_indices_v' ],
+            cond: { $in: [ '$max_index', '$$this' ] }
+        } },
+        0
+      ] }, '$max_index' ] },
+      // Value of the winning number
+      final_number_called: { $toInt: { $arrayElemAt: [ '$numbers', '$max_index' ] } }
+    }
+  }, {
+    $set: { // List the numbers from the winning board
+      // Concatenate lines of losing board using $reduce and $concatArrays
+      winning_board_numbers: { $reduce: {
+        input: { $arrayElemAt: [ '$boards_h', '$winning_board_index' ] },
+        initialValue: [],
+        'in': { $concatArrays: [ '$$value', '$$this' ] }
+      } }
+    }
+  }, {
+    $set: { // Calculate the remaining numbers after the winning number
+      // Filter out numbers with indexes before the winning number
+      remaining_numbers: { $filter: {
+        input: '$winning_board_numbers',
+        cond: { $gt: [ { $indexOfArray: [ '$numbers', '$$this' ] }, '$max_index' ] }
+      } }
+    }
+  }, {
+    $set: { // Sum the remaining numbers
+      remaining_sum: { $sum: { $map: {
+        input: '$remaining_numbers',
+        'in': { $toInt: '$$this' }
+      } } }
+    }
+  }, {
+    $project: { // Calculate the result
+      // Multiply the remaining sum by the winning number
+      result: { $multiply: [ '$remaining_sum', '$final_number_called' ] }
+    }
+  }
+]
+
+db.day1.aggregate(aggregation);
