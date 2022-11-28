@@ -3,7 +3,7 @@
     $group: {
       _id: null,
       depths: {
-        $push: "$line",
+        $push: { $toInt: "$line" },
       },
     },
   },
@@ -11,52 +11,19 @@
     $project: {
       _id: 0,
       depths: {
-        $map: {
-          input: {
-            $range: [
-              0,
-              {
-                $size: "$depths",
-              },
-            ],
-          },
-          as: "i",
-          in: {
-            i: "$$i",
-            depth: {
-              $toInt: { $arrayElemAt: ["$depths", "$$i"] },
-            },
-          },
-        },
-      },
-    },
-  },
-  {
-    $project: {
-      depths: {
         $filter: {
-          input: "$depths",
-          as: "this",
+          input: { $range: [1, { $size: "$depths" }] },
+          as: "i",
           cond: {
-            $cond: {
-              if: {
-                $eq: ["$$this.i", 0],
-              },
-              then: false,
-              else: {
-                $gt: [
-                  "$$this.depth",
-                  {
-                    $arrayElemAt: [
-                      "$depths.depth",
-                      {
-                        $subtract: ["$$this.i", 1],
-                      },
-                    ],
-                  },
+            $gt: [
+              { $arrayElemAt: ["$depths", "$$i"] },
+              {
+                $arrayElemAt: [
+                  "$depths",
+                  { $subtract: ["$$i", 1] },
                 ],
               },
-            },
+            ],
           },
         },
       },

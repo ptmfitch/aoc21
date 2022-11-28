@@ -3,7 +3,7 @@
     $group: {
       _id: null,
       depths: {
-        $push: "$line",
+        $push: { $toInt: "$line" },
       },
     },
   },
@@ -12,65 +12,24 @@
       _id: 0,
       depths: {
         $map: {
-          input: {
-            $range: [
-              0,
-              {
-                $size: "$depths",
-              },
-            ],
-          },
+          input: { $range: [2, { $size: "$depths" }] },
           as: "i",
           in: {
-            i: "$$i",
-            depth: {
-              $toInt: { $arrayElemAt: ["$depths", "$$i"] },
-            },
-          },
-        },
-      },
-    },
-  },
-  {
-    $set: {
-      depths: {
-        $map: {
-          input: "$depths",
-          as: "this",
-          in: {
-            $cond: {
-              if: {
-                $lt: ["$$this.i", 2],
+            $add: [
+              { $arrayElemAt: ["$depths", "$$i"] },
+              {
+                $arrayElemAt: [
+                  "$depths",
+                  { $subtract: ["$$i", 1] },
+                ],
               },
-              then: {
-                i: "$$this.i",
-                sum: 0,
+              {
+                $arrayElemAt: [
+                  "$depths",
+                  { $subtract: ["$$i", 2] },
+                ],
               },
-              else: {
-                i: "$$this.i",
-                sum: {
-                  $add: [
-                    "$$this.depth",
-                    {
-                      $arrayElemAt: [
-                        "$depths.depth",
-                        {
-                          $subtract: ["$$this.i", 1],
-                        },
-                      ],
-                    },
-                    {
-                      $arrayElemAt: [
-                        "$depths.depth",
-                        {
-                          $subtract: ["$$this.i", 2],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              },
-            },
+            ],
           },
         },
       },
@@ -80,24 +39,15 @@
     $set: {
       depths: {
         $filter: {
-          input: "$depths",
-          as: "this",
+          input: { $range: [0, { $size: "$depths" }] },
+          as: "i",
           cond: {
-            $and: [
+            $gt: [
+              { $arrayElemAt: ["$depths", "$$i"] },
               {
-                $gte: ["$$this.i", 3],
-              },
-              {
-                $gt: [
-                  "$$this.sum",
-                  {
-                    $arrayElemAt: [
-                      "$depths.sum",
-                      {
-                        $subtract: ["$$this.i", 1],
-                      },
-                    ],
-                  },
+                $arrayElemAt: [
+                  "$depths",
+                  { $subtract: ["$$i", 1] },
                 ],
               },
             ],
