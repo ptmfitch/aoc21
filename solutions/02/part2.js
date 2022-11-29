@@ -1,46 +1,100 @@
-[{$set: {
- split: {
-  $split: [
-   '$instruction',
-   ' '
-  ]
- }
-}}, {$project: {
- _id: 0,
- direction: {
-  $arrayElemAt: [
-   '$split',
-   0
-  ]
- },
- distance: {
-  $toInt: {
-   $arrayElemAt: [
-    '$split',
-    1
-   ]
-  }
- }
-}}, {$group: {
- _id: null,
- accumulator: {
-  $accumulator: {
-   init: 'function() {\n      return {\n        forward: 0,\n        depth: 0,\n        aim: 0\n      }\n    }',
-   accumulate: 'function(state, direction, distance) {\n      let fw = state.forward\n      let dp = state.depth\n      let am = state.aim\n      if (direction == "forward") {\n        fw += distance\n        dp += distance * am\n      } else {\n        if (direction == "down") {\n          am += distance\n        } else {\n          am -= distance\n        }\n      }\n      return {\n        forward: fw,\n        depth: dp,\n        aim: am\n      }\n    }',
-   accumulateArgs: [
-    '$direction',
-    '$distance'
-   ],
-   merge: 'function(state1, state2) {\n      return {\n        forward: state1.forward + state2.forward,\n        depth: state1.depth + state2.depth,\n        aim: state1.aim + state2.aim\n      }\n    }',
-   lang: 'js'
-  }
- }
-}}, {$project: {
- _id: 0,
- result: {
-  $multiply: [
-   '$accumulator.forward',
-   '$accumulator.depth'
-  ]
- }
-}}]
+[
+  {
+    $project: {
+      line: {
+        $let: {
+          vars: {
+            split: { $split: ["$line", " "] },
+          },
+          in: {
+            dir: { $arrayElemAt: ["$$split", 0] },
+            dis: {
+              $toInt: {
+                $arrayElemAt: ["$$split", 1],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      lines: {
+        $push: "$line",
+      },
+    },
+  },
+  {
+    /**
+     * specifications: The fields to
+     *   include or exclude.
+     */
+    $project: {
+      _id: 0,
+      res: {
+        $reduce: {
+          input: "$lines",
+          initialValue: {
+            x: 0,
+            y: 0,
+            a: 0,
+          },
+          in: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ["$$this.dir", "down"] },
+                  then: {
+                    x: "$$value.x",
+                    y: "$$value.y",
+                    a: {
+                      $add: ["$$value.a", "$$this.dis"],
+                    },
+                  },
+                },
+                {
+                  case: { $eq: ["$$this.dir", "up"] },
+                  then: {
+                    x: "$$value.x",
+                    y: "$$value.y",
+                    a: {
+                      $subtract: [
+                        "$$value.a",
+                        "$$this.dis",
+                      ],
+                    },
+                  },
+                },
+              ],
+              default: {
+                x: { $add: ["$$value.x", "$$this.dis"] },
+                y: {
+                  $add: [
+                    "$$value.y",
+                    {
+                      $multiply: [
+                        "$$value.a",
+                        "$$this.dis",
+                      ],
+                    },
+                  ],
+                },
+                a: "$$value.a",
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      res: {
+        $multiply: ["$res.x", "$res.y"],
+      },
+    },
+  },
+]

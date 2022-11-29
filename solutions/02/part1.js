@@ -1,78 +1,62 @@
-[{$set: {
- split: {
-  $split: [
-   '$instruction',
-   ' '
-  ]
- }
-}}, {$project: {
- _id: 0,
- direction: {
-  $arrayElemAt: [
-   '$split',
-   0
-  ]
- },
- distance: {
-  $toInt: {
-   $arrayElemAt: [
-    '$split',
-    1
-   ]
-  }
- }
-}}, {$group: {
- _id: null,
- forward: {
-  $sum: {
-   $cond: {
-    'if': {
-     $eq: [
-      '$direction',
-      'forward'
-     ]
-    },
-    then: '$distance',
-    'else': 0
-   }
-  }
- },
- depth: {
-  $sum: {
-   $cond: {
-    'if': {
-     $eq: [
-      '$direction',
-      'down'
-     ]
-    },
-    then: '$distance',
-    'else': {
-     $cond: {
-      'if': {
-       $eq: [
-        '$direction',
-        'up'
-       ]
+[
+  {
+    $project: {
+      line: {
+        $let: {
+          vars: {
+            split: { $split: ["$line", " "] },
+          },
+          in: {
+            dir: { $arrayElemAt: ["$$split", 0] },
+            dis: {
+              $toInt: {
+                $arrayElemAt: ["$$split", 1],
+              },
+            },
+          },
+        },
       },
-      then: {
-       $multiply: [
-        '$distance',
-        -1
-       ]
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      x: {
+        $sum: {
+          $cond: {
+            if: {
+              $eq: ["$line.dir", "forward"],
+            },
+            then: "$line.dis",
+            else: 0,
+          },
+        },
       },
-      'else': 0
-     }
-    }
-   }
-  }
- }
-}}, {$project: {
- _id: 0,
- result: {
-  $multiply: [
-   '$forward',
-   '$depth'
-  ]
- }
-}}]
+      y: {
+        $sum: {
+          $switch: {
+            branches: [
+              {
+                case: { $eq: ["$line.dir", "down"] },
+                then: "$line.dis",
+              },
+              {
+                case: { $eq: ["$line.dir", "up"] },
+                then: { $multiply: ["$line.dis", -1] },
+              },
+            ],
+            default: 0,
+          },
+        },
+      },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      res: {
+        $multiply: ["$x", "$y"],
+      },
+    },
+  },
+]
