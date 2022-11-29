@@ -1,1520 +1,216 @@
-[{$set: {
- n_binary: {
-  $map: {
-   input: {
-    $range: [
-     0,
-     {
-      $strLenCP: '$n'
-     }
-    ]
-   },
-   'in': {
-    $toInt: {
-     $substr: [
-      '$n',
-      '$$this',
-      1
-     ]
-    }
-   }
-  }
- }
-}}, {$set: {
- n_decimal: {
-  $sum: {
-   $map: {
-    input: {
-     $range: [
-      0,
-      {
-       $size: '$n_binary'
-      }
-     ]
-    },
-    'in': {
-     $multiply: [
-      {
-       $arrayElemAt: [
-        '$n_binary',
-        {
-         $subtract: [
-          {
-           $size: '$n_binary'
+[
+  {
+    $group: {
+      _id: null,
+      lines: {
+        $push: {
+          $map: {
+            input: {
+              $range: [
+                0,
+                {
+                  $strLenCP: "$line",
+                },
+              ],
+            },
+            in: {
+              $toInt: {
+                $substr: ["$line", "$$this", 1],
+              },
+            },
           },
-          {
-           $add: [
-            '$$this',
-            1
-           ]
-          }
-         ]
-        }
-       ]
+        },
       },
-      {
-       $pow: [
-        2,
-        '$$this'
-       ]
-      }
-     ]
-    }
-   }
-  }
- }
-}}, {$group: {
- _id: null,
- ogr: {
-  $push: '$$ROOT'
- },
- csr: {
-  $push: '$$ROOT'
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         0
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                0
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         0
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                0
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         1
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                1
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         1
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                1
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         2
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                2
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         2
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                2
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         3
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                3
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         3
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                3
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         4
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                4
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         4
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                4
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         5
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                5
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         5
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                5
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         6
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                6
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         6
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                6
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         7
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                7
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         7
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                7
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         8
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                8
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         8
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                8
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         9
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                9
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         9
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                9
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         10
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                10
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         10
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                10
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$set: {
- ogr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$ogr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$ogr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         11
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$ogr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                11
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$ogr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 1,
-         'else': 0
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$ogr'
-  }
- },
- csr: {
-  $cond: {
-   'if': {
-    $gt: [
-     {
-      $size: '$csr'
-     },
-     1
-    ]
-   },
-   then: {
-    $filter: {
-     input: '$csr',
-     cond: {
-      $eq: [
-       {
-        $arrayElemAt: [
-         '$$this.n_binary',
-         11
-        ]
-       },
-       {
-        $cond: {
-         'if': {
-          $gte: [
-           {
-            $sum: {
-             $map: {
-              input: '$csr',
-              'in': {
-               $arrayElemAt: [
-                '$$this.n_binary',
-                11
-               ]
-              }
-             }
-            }
-           },
-           {
-            $divide: [
-             {
-              $size: '$csr'
-             },
-             2
-            ]
-           }
-          ]
-         },
-         then: 0,
-         'else': 1
-        }
-       }
-      ]
-     }
-    }
-   },
-   'else': '$csr'
-  }
- }
-}}, {$project: {
- _id: 0,
- result: {
-  $multiply: [
-   {
-    $arrayElemAt: [
-     '$ogr.n_decimal',
-     0
-    ]
-   },
-   {
-    $arrayElemAt: [
-     '$csr.n_decimal',
-     0
-    ]
-   }
-  ]
- }
-}}]
+    },
+  },
+  {
+    $project: {
+      res: {
+        $reduce: {
+          input: {
+            $range: [0, { $size: { $first: "$lines" } }],
+          },
+          initialValue: {
+            o: "$lines",
+            c: "$lines",
+          },
+          in: {
+            $let: {
+              vars: {
+                oN: {
+                  $cond: {
+                    if: {
+                      $gte: [
+                        {
+                          $sum: {
+                            $map: {
+                              input: "$$value.o",
+                              as: "line",
+                              in: {
+                                $arrayElemAt: [
+                                  "$$line",
+                                  "$$this",
+                                ],
+                              },
+                            },
+                          },
+                        },
+                        {
+                          $divide: [
+                            { $size: "$$value.o" },
+                            2,
+                          ],
+                        },
+                      ],
+                    },
+                    then: 1,
+                    else: 0,
+                  },
+                },
+                cN: {
+                  $cond: {
+                    if: {
+                      $gte: [
+                        {
+                          $sum: {
+                            $map: {
+                              input: "$$value.c",
+                              as: "line",
+                              in: {
+                                $arrayElemAt: [
+                                  "$$line",
+                                  "$$this",
+                                ],
+                              },
+                            },
+                          },
+                        },
+                        {
+                          $divide: [
+                            { $size: "$$value.c" },
+                            2,
+                          ],
+                        },
+                      ],
+                    },
+                    then: 0,
+                    else: 1,
+                  },
+                },
+              },
+              in: {
+                o: {
+                  $cond: {
+                    if: {
+                      $gt: [{ $size: "$$value.o" }, 1],
+                    },
+                    then: {
+                      $filter: {
+                        input: "$$value.o",
+                        as: "line",
+                        cond: {
+                          $eq: [
+                            {
+                              $arrayElemAt: [
+                                "$$line",
+                                "$$this",
+                              ],
+                            },
+                            "$$oN",
+                          ],
+                        },
+                      },
+                    },
+                    else: "$$value.o",
+                  },
+                },
+                c: {
+                  $cond: {
+                    if: {
+                      $gt: [{ $size: "$$value.c" }, 1],
+                    },
+                    then: {
+                      $filter: {
+                        input: "$$value.c",
+                        as: "line",
+                        cond: {
+                          $eq: [
+                            {
+                              $arrayElemAt: [
+                                "$$line",
+                                "$$this",
+                              ],
+                            },
+                            "$$cN",
+                          ],
+                        },
+                      },
+                    },
+                    else: "$$value.c",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      res: {
+        $map: {
+          input: [
+            { $first: "$res.o" },
+            { $first: "$res.c" },
+          ],
+          as: "x",
+          in: {
+            $reduce: {
+              input: {
+                $range: [0, { $size: "$$x" }],
+              },
+              initialValue: 0,
+              in: {
+                $add: [
+                  "$$value",
+                  {
+                    $multiply: [
+                      { $arrayElemAt: ["$$x", "$$this"] },
+                      {
+                        $pow: [
+                          2,
+                          {
+                            $subtract: [
+                              {
+                                $size: "$$x",
+                              },
+                              {
+                                $add: ["$$this", 1],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    $project: {
+      res: {
+        $multiply: [
+          { $arrayElemAt: ["$res", 0] },
+          { $arrayElemAt: ["$res", 1] },
+        ],
+      },
+    },
+  },
+]
